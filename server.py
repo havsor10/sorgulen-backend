@@ -6,7 +6,7 @@ from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
 
 # Import email notification helpers
-from email_utils import send_customer_confirmation, send_admin_notification
+from email_utils import send_customer_confirmation, send_admin_notification, send_feedback_email
 from motor.motor_asyncio import AsyncIOMotorClient
 from passlib.context import CryptContext
 from datetime import datetime, timedelta
@@ -173,6 +173,26 @@ class Notification(BaseModel):
     order_id: Optional[str] = None
     read: bool = False
     created_at: datetime = Field(default_factory=datetime.utcnow)
+
+# Feedback model used by the /feedback endpoint
+class Feedback(BaseModel):
+    """Model for website feedback submissions.
+
+    Attributes
+    ----------
+    name : Optional[str]
+        Name of the person providing feedback. Can be omitted for anonymous feedback.
+    rating : Optional[int]
+        Rating from 1 to 5 reflecting the visitor's experience. Optional.
+    message : str
+        The free‑text feedback message. Required.
+    anonymous : bool
+        Whether the visitor requested to stay anonymous. Defaults to False.
+    """
+    name: Optional[str] = None
+    rating: Optional[int] = None
+    message: str
+    anonymous: bool = False
 
 # Authentication functions
 def verify_password(plain_password, hashed_password):
@@ -468,6 +488,35 @@ async def rate_order(order_id: str, rating_data: dict):
         raise HTTPException(status_code=404, detail="Order not found")
     
     return {"message": "Rating submitted successfully"}
+
+# Feedback submission route
+@api_router.post("/feedback")
+async def submit_feedback(feedback_data: Feedback, background_tasks: BackgroundTasks):
+    """Endpoint for receiving website feedback.
+
+    Receives feedback details from the frontend and dispatches an email to the
+    administrator in the background. Returns a simple confirmation message.
+
+    Parameters
+    ----------
+    feedback_data : Feedback
+        The feedback payload parsed from the request body.
+    background_tasks : BackgroundTasks
+        FastAPI dependency used to schedule asynchronous tasks.
+    """
+    # Validate rating if provided
+    if feedback_data.rating is not None:
+        if feedback_data.rating < 1 or feedback_data.rating > 5:
+            raise HTTPException(status_code=400, detail="Rating must be between 1 and 5")
+    # Prepare background email sending
+    background_tasks.add_task(
+        send_feedback_email,
+        feedback_data.name or "",
+        feedback_data.rating or 0,
+        feedback_data.message,
+        feedback_data.anonymous
+    )
+    return {"message": "Feedback mottatt"}
 
 # Price calculation routes
 @api_router.post("/calculate-price")

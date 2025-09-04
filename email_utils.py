@@ -183,3 +183,44 @@ def send_admin_notification(order):
     """
     text_body = "\n".join(details)
     send_email(admin_email, subject, html_body, text_body)
+
+# New function for sending website feedback emails
+def send_feedback_email(name: str, rating: int, message: str, anonymous: bool = False):
+    """Send a feedback email to the administrator.
+
+    This helper constructs an email from feedback details provided by a website visitor
+    and sends it to the configured admin email address. If SMTP configuration is
+    incomplete or the admin email is missing, the function returns without error.
+
+    Parameters
+    ----------
+    name: str
+        The name of the person giving feedback. May be an empty string if anonymous.
+    rating: int
+        A rating from 1 to 5 indicating the visitor's assessment of the website.
+    message: str
+        The free‑text feedback message provided by the visitor.
+    anonymous: bool, optional
+        Whether the visitor chose to remain anonymous. Defaults to False.
+    """
+    admin_email = os.environ.get("MAIL_ADMIN_TO") or os.environ.get("ADMIN_EMAIL")
+    if not admin_email:
+        print("[email_utils] ADMIN_EMAIL not configured; skipping feedback notification")
+        return
+    # Compose subject line
+    subject = "Tilbakemelding fra nettsiden"
+    # Compose body content
+    sender_label = "Anonym" if anonymous or not name else name
+    rating_text = f"Vurdering: {rating} av 5" if rating else "Vurdering: Ikke oppgitt"
+    # Plain text body
+    text_body = f"Feedback fra nettsiden\nAvsender: {sender_label}\n{rating_text}\n\n{message}"
+    # HTML body with basic styling
+    html_body = f"""
+        <div style="font-family:system-ui,Arial,sans-serif;max-width:600px">
+            <h2>Ny tilbakemelding fra nettsiden</h2>
+            <p><strong>Avsender:</strong> {sender_label}</p>
+            <p><strong>{rating_text}</strong></p>
+            <p style="white-space:pre-line">{message}</p>
+        </div>
+    """
+    send_email(admin_email, subject, html_body, text_body)

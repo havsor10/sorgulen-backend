@@ -1,0 +1,5 @@
+[build]
+  publish = "."
+
+[build.environment]
+  RENDER_API_URL = "https://your-render-backend.onrender.com"

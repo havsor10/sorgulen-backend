@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="no">
+<head>
+  <meta charset="UTF-8" />
+  <title>Sørgulen Industriservice</title>
+</head>
+<body>
+  <nav>
+    <ul>
+      <li>Åpningstider
+        <ul>
+          <li><a href="/admin/login">Admin</a></li>
+        </ul>
+      </li>
+    </ul>
+  </nav>
+
+  <h2>Bestill tjeneste</h2>
+  <form id="orderForm">
+    <select name="service" required>
+      <option value="Brøyting">Brøyting</option>
+      <option value="Trefelling">Trefelling</option>
+      <option value="Plenklipping">Plenklipping</option>
+      <option value="Diverse">Diverse</option>
+    </select>
+    <input name="name" placeholder="Navn" required />
+    <input name="phone" placeholder="Telefon" required />
+    <input name="email" placeholder="E-post" required />
+    <textarea name="message" placeholder="Melding" required></textarea>
+    <button type="submit">Send</button>
+  </form>
+
+  <h2>Tilbakemelding</h2>
+  <form id="feedbackForm">
+    <input type="number" name="rating" min="1" max="5" required />
+    <textarea name="comment" placeholder="Kommentar" required></textarea>
+    <label><input type="checkbox" name="anonymous" checked /> Anonym</label>
+    <input name="name" placeholder="Navn" />
+    <input name="email" placeholder="E-post" />
+    <button type="submit">Send</button>
+  </form>
+
+  <script src="/assets/js/bestill.js"></script>
+  <script src="/assets/js/feedback.js"></script>
+  <script>
+    document.getElementById('orderForm').addEventListener('submit', function(e){
+      e.preventDefault();
+      submitOrder(this);
+    });
+    document.getElementById('feedbackForm').addEventListener('submit', function(e){
+      e.preventDefault();
+      submitFeedback(this);
+    });
+  </script>
+</body>
+</html>

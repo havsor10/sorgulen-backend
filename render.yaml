@@ -1,0 +1,7 @@
+services:
+  - type: web
+    name: sorgulen-backend
+    env: node
+    buildCommand: "npm install"
+    startCommand: "node server.js"
+    healthCheckPath: "/api/health"

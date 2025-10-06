@@ -1,0 +1,28 @@
+{
+  "name": "sorgulen-backend",
+  "version": "1.0.0",
+  "description": "Backend API for the Sorgulen Industriservice web site.",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "@adminjs/express": "^6.0.1",
+    "@adminjs/mongoose": "^4.1.0",
+    "adminjs": "^7.0.0",
+    "bcryptjs": "^2.4.3",
+    "cookie-parser": "^1.4.6",
+    "cors": "^2.8.5",
+    "express": "^4.18.2",
+    "express-rate-limit": "^7.0.0",
+    "helmet": "^7.0.0",
+    "jsonwebtoken": "^9.0.0",
+    "mongoose": "^8.6.0",
+    "morgan": "^1.10.0",
+    "nodemailer": "^6.9.5",
+    "zod": "^3.22.2"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

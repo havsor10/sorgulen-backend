@@ -1,12 +1,5 @@
 /*
- * Entry point for the Sorgulen Industriservice backend.
- *
- * This service exposes a REST API for authenticating administrators,
- * creating and managing customer orders. It is designed to be deployed
- * on a managed host such as Render and to serve requests from a
- * frontend hosted on Netlify. CORS configuration, JWT secrets,
- * database URIs and mail credentials are read from environment
- * variables. See `.env.example` for the expected configuration keys.
+ * Sorgulen Industriservice – backend med AdminJS og API.
  */
 
 const express = require('express');
@@ -17,88 +10,88 @@ const rateLimit = require('express-rate-limit');
 const cookieParser = require('cookie-parser');
 const mongoose = require('mongoose');
 
-// Load configuration from a .env file in development.
-// In production these are injected via Render environment variables.
+// Prøv å laste .env lokalt, men ignorer i prod.
 try {
   require('dotenv').config();
-} catch (err) {
-  // ignore if dotenv not installed
-}
+} catch (_) {}
 
 const authRoutes = require('./routes/auth');
 const orderRoutes = require('./routes/orders');
+const buildAdminRouter = require('./admin');
 const { ensureOwner } = require('./seed/ensureOwner');
 
 const app = express();
 
-// Security and parsing middleware
+// Tillat Render proxy – nødvendig for AdminJS-cookies
+app.set('trust proxy', 1);
+
+// Standard middleware
 app.use(helmet());
 app.use(morgan('combined'));
 app.use(express.json({ limit: '10kb' }));
 app.use(cookieParser());
 
-// Configure CORS for Netlify domains
+// CORS for Netlify-domener
 const allowedOrigins = (process.env.NETLIFY_ORIGIN || '')
   .split(',')
-  .map((o) => o.trim())
+  .map(o => o.trim())
   .filter(Boolean);
 
 app.use(
   cors({
-    origin: (origin, callback) => {
-      if (!origin) return callback(null, true);
-      if (allowedOrigins.includes(origin)) return callback(null, true);
-      return callback(new Error('Not allowed by CORS'));
+    origin: (origin, cb) => {
+      if (!origin) return cb(null, true);
+      if (allowedOrigins.includes(origin)) return cb(null, true);
+      return cb(new Error('Not allowed by CORS'));
     },
     credentials: true,
   }),
 );
 
-// Basic rate limiting
-const apiLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 100,
-  standardHeaders: true,
-  legacyHeaders: false,
-});
-app.use('/api', apiLimiter);
+// Rate limiting
+app.use(
+  '/api',
+  rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 100,
+    standardHeaders: true,
+    legacyHeaders: false,
+  }),
+);
 
-// Health check endpoint (used by Render)
-app.get('/api/health', (req, res) => {
-  res.json({ ok: true });
-});
+// Health check
+app.get('/api/health', (_req, res) => res.json({ ok: true }));
 
-// Mount routes
+// API routes
 app.use('/api/auth', authRoutes);
 app.use('/api/orders', orderRoutes);
 
+// AdminJS
+const ADMIN_BASE = process.env.ADMIN_BASE_URL || '/admin';
+app.use(ADMIN_BASE, buildAdminRouter());
+
 // Global error handler
-app.use((err, req, res, next) => {
+app.use((err, _req, res, _next) => {
   console.error(err);
-  const status = err.status || 500;
-  res.status(status).json({ message: err.message || 'Internal server error' });
+  res.status(err.status || 500).json({ message: err.message || 'Internal server error' });
 });
 
-// Connect to MongoDB and start the server
+// Start server
 async function start() {
-  const mongoUri = process.env.MONGODB_URI;
-  if (!mongoUri) throw new Error('MONGODB_URI is not defined');
+  const uri = process.env.MONGODB_URI;
+  if (!uri) throw new Error('MONGODB_URI is not defined');
 
-  await mongoose.connect(mongoUri, {
-    maxPoolSize: 10,
-    autoIndex: false,
-  });
+  await mongoose.connect(uri, { maxPoolSize: 10, autoIndex: false });
 
-  // Ensure admin account exists
-  await ensureOwner();
+  await ensureOwner(); // oppretter admin hvis ikke finnes
 
   const port = process.env.PORT || 10000;
-  app.listen(port, () => {
-    console.log(`✅ Server listening on port ${port}`);
-  });
+  app.listen(port, () =>
+    console.log(`✅ Server live på port ${port} | Admin-panel: ${ADMIN_BASE}`)
+  );
 }
 
-start().catch((err) => {
-  console.error('❌ Failed to start server:', err);
+start().catch(err => {
+  console.error('❌ Server startup error:', err);
   process.exit(1);
 });
